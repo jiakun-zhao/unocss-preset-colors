@@ -1,66 +1,74 @@
 import type { CSSColorValue } from '@unocss/rule-utils'
 import type { Preset } from 'unocss'
-import { notUndefined } from '@antfu/utils'
-import { colorToString, parseCssColor as parse } from '@unocss/rule-utils'
+import { isUndefined, notUndefined } from '@antfu/utils'
+import { parseCssColor as parse } from '@unocss/rule-utils'
 import { name } from '../package.json'
 
-type Property = 'background-color' | 'background' | 'border' | 'border-bottom-color' | 'border-color' | 'border-left-color' | 'border-right-color' | 'border-top-color' | 'box-shadow' | 'caret-color' | 'color' | 'column-rule' | 'column-rule-color' | 'filter' | 'opacity' | 'outline-color' | 'outline' | 'text-decoration' | 'text-decoration-color' | 'text-shadow'
+type Property = 'background-color' | 'border-color' | 'caret-color' | 'color' | 'column-rule-color' | 'outline-color' | 'text-decoration-color'
 
-export interface Color {
-  property: Property | (string & {})
+interface Color {
+  property?: Property | (string & {})
   light: string
   dark: string
 }
 
-interface Format {
-  key: string
-  property: Property | (string & {})
-  light: CSSColorValue
-  dark: CSSColorValue
+interface Options {
+  mode?: 'media' | { tag?: string, dark: string, light: string }
+  colors: Record<string, Color>
 }
 
-function format(item: [string, Color]): Partial<Format> {
-  const [key, { property, dark, light }] = item
-  return { key, property, dark: parse(dark), light: parse(light) }
-}
+export default function (options: Options): Preset {
+  const { mode = { dark: '.dark', light: '.light' }, colors } = options
 
-function verify(color: Partial<Format>): color is Format {
-  return notUndefined(color.light) && notUndefined(color.dark)
-}
+  const value = Object.entries(colors)
+    .map(([key, value]) => {
+      const dark = parse(value.dark)
+      const light = parse(value.light)
+      let property = value.property
 
-export default function (colors: Record<string, Color>): Preset {
+      if (isUndefined(light))
+        return undefined
+
+      if (isUndefined(dark))
+        return undefined
+
+      if (isUndefined(property)) {
+        const start = (...args: string[]) => args.some(it => key.startsWith(it))
+        if (start('text'))
+          property = 'color'
+        else if (start('bg'))
+          property = 'background-color'
+        else if (start('border', 'b'))
+          property = 'border-color'
+        else
+          return undefined
+      }
+
+      return { key, property, dark, light }
+    })
+    .filter(notUndefined)
+
+  const media = '@media (prefers-color-scheme: dark)'
+  const createRegExp = (key: string) => new RegExp(`^${key}(?:[:|/](\\d+))?$`)
+
   return {
     name,
-    rules: Object.entries(colors)
-      .map(format)
-      .filter(verify)
-      .map(({ key, property, dark, light }) => {
-        return [
-          new RegExp(`^${key}(?:[:|/](\\d+))?$`),
-          ([,_opacity], { symbols }) => {
-            const opacity = +(_opacity ?? '100') / 100
-            const lightColor = colorToString(light, opacity)
-            const darkColor = colorToString(dark, opacity)
-            return [
-              {
-                [symbols.selector]: selector => `.dark ${selector}`,
-                [property]: darkColor,
-              },
-              {
-                [symbols.parent]: '@media (prefers-color-scheme: dark)',
-                [symbols.selector]: selector => `${selector}:not(.light):not(.dark)`,
-                [property]: darkColor,
-              },
-              {
-                [symbols.selector]: selector => `.light ${selector}`,
-                [property]: lightColor,
-              },
-              {
-                [property]: lightColor,
-              },
-            ]
-          },
-        ]
-      }),
+    preflights: [{
+      getCSS() {
+        const toVar = (it: CSSColorValue) => it.components.join(' ')
+        const darkVars = value.map(it => `--${it.key}:${toVar(it.dark)}`).join(';')
+        const lightVars = value.map(it => `--${it.key}:${toVar(it.light)}`).join(';')
+        if (mode === 'media') {
+          return `:root{${lightVars}}${media}{:root{${darkVars}}}`
+        }
+        const { tag = 'html', light, dark } = mode
+        return `${tag},${tag}${light}{${lightVars}}${tag}${dark}{${darkVars}}${media}{${tag}:not(:is(${light},${dark})){${darkVars}}}`
+      },
+    }],
+    rules: value.map(({ key, property }) => [
+      createRegExp(key),
+      ([, opacity]) => ({ [property]: `rgb(var(--${key}) / ${+(opacity ?? '100') / 100})` }),
+      { autocomplete: key },
+    ]),
   }
 }
