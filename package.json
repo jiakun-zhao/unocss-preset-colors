@@ -5,13 +5,13 @@
   "description": "",
   "author": "Jiakun Zhao <hi@zhaojiakun.com>",
   "license": "MIT",
-  "homepage": "https://github.com/unocss-preset-colors#readme",
+  "homepage": "https://github.com/jiakun-zhao/unocss-preset-colors#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/unocss-preset-colors.git"
+    "url": "git+https://github.com/jiakun-zhao/unocss-preset-colors.git"
   },
   "bugs": {
-    "url": "https://github.com/unocss-preset-colors/issues"
+    "url": "https://github.com/jiakun-zhao/unocss-preset-colors/issues"
   },
   "exports": {
     ".": {
