@@ -12,7 +12,7 @@ interface Color {
   dark: string
 }
 
-interface Options {
+export interface Options {
   mode?: 'media' | { tag?: string, dark: string, light: string }
   colors: Record<string, Color>
 }
