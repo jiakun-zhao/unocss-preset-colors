@@ -2,4 +2,8 @@
 
 ![npm version](https://img.shields.io/npm/v/unocss-preset-colors?color=%23954)
 
-我太懒了，不想写 README.md，看看 [测试文件](./src/index.test.ts) 吧
+See [test](./src/index.test.ts)...
+
+#### LICENSE
+
+MIT License © 2025-PRESENT [Jiakun Zhao](https://github.com/jiakun-zhao)

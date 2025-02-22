@@ -1,84 +1,31 @@
-import type { Options } from './index'
-import { UnoGenerator } from 'unocss'
+import type { Theme } from 'unocss/preset-mini'
+import { createGenerator, presetWind3 } from 'unocss'
 import { expect, it } from 'vitest'
 import presetColors from './index'
 
-async function generate(options: Options) {
-  const uno = new UnoGenerator({
+it('should work', async () => {
+  const uno = await createGenerator<Theme>({
     presets: [
-      presetColors(options),
+      presetWind3({ preflight: false }),
+      presetColors({
+        colors: { accent: { dark: 'rgb(1,2,3,.1)', light: 'rgb(1,2,3,.12)' } },
+        borderColor: { foo: { dark: '#111', light: '#ddd' } },
+      }),
     ],
   })
-  const code = `
-  <div class="text-primary"></div>
-  <div class="text-primary:10"></div>
-  <div class="bg-primary/10"></div>
-  <div class="b-primary/10"></div>
 
-  <div class="unknown-primary"></div>
-  <div class="unknown-secondly"></div>
-  `
-  return (await uno.generate(code)).css
-}
-
-it('with property', async () => {
-  const css = await generate({
-    colors: {
-      'text-primary': { property: 'custom-property', light: '#000', dark: '#fff' },
-    },
-  })
-  expect(css).toMatchInlineSnapshot(`
+  expect((await uno.generate('text-accent text-foo')).css).toMatchInlineSnapshot(`
     "/* layer: preflights */
-    html,html.light{--text-primary:0 0 0}html.dark{--text-primary:255 255 255}@media (prefers-color-scheme: dark){html:not(:is(.light,.dark)){--text-primary:255 255 255}}
+    html,html.light{--accent:1 2 3;--border-color-foo:221 221 221;}html.dark{--accent:1 2 3;--border-color-foo:17 17 17;}@media (prefers-color-scheme:dark){html:not(:is(.light,.dark)){--accent:1 2 3;--border-color-foo:17 17 17;}}
     /* layer: default */
-    .text-primary{custom-property:rgb(var(--text-primary) / 1);}
-    .text-primary\\:10{custom-property:rgb(var(--text-primary) / 0.1);}"
+    .text-accent{--un-text-opacity:1;color:rgb(var(--accent) / var(--un-text-opacity));}"
   `)
-})
 
-it('without property', async () => {
-  const css = await generate({
-    colors: {
-      'unknown-primary': { property: 'color', light: '#000', dark: '#fff' },
-      'unknown-secondly': { light: '#000', dark: '#fff' }, // need property
-    },
-  })
-  expect(css).toMatchInlineSnapshot(`
+  expect((await uno.generate('text-accent b-foo')).css).toMatchInlineSnapshot(`
     "/* layer: preflights */
-    html,html.light{--unknown-primary:0 0 0}html.dark{--unknown-primary:255 255 255}@media (prefers-color-scheme: dark){html:not(:is(.light,.dark)){--unknown-primary:255 255 255}}
+    html,html.light{--accent:1 2 3;--border-color-foo:221 221 221;}html.dark{--accent:1 2 3;--border-color-foo:17 17 17;}@media (prefers-color-scheme:dark){html:not(:is(.light,.dark)){--accent:1 2 3;--border-color-foo:17 17 17;}}
     /* layer: default */
-    .unknown-primary{color:rgb(var(--unknown-primary) / 1);}"
-  `)
-})
-
-it('media', async () => {
-  const css = await generate({
-    mode: 'media',
-    colors: {
-      'text-primary': { light: '#000', dark: '#fff' },
-    },
-  })
-  expect(css).toMatchInlineSnapshot(`
-    "/* layer: preflights */
-    :root{--text-primary:0 0 0}@media (prefers-color-scheme: dark){:root{--text-primary:255 255 255}}
-    /* layer: default */
-    .text-primary{color:rgb(var(--text-primary) / 1);}
-    .text-primary\\:10{color:rgb(var(--text-primary) / 0.1);}"
-  `)
-})
-
-it('tag & custom selector', async () => {
-  const css = await generate({
-    mode: { tag: 'body', dark: '.theme-dark', light: '.theme-light' },
-    colors: {
-      'text-primary': { light: '#000', dark: '#fff' },
-    },
-  })
-  expect(css).toMatchInlineSnapshot(`
-    "/* layer: preflights */
-    body,body.theme-light{--text-primary:0 0 0}body.theme-dark{--text-primary:255 255 255}@media (prefers-color-scheme: dark){body:not(:is(.theme-light,.theme-dark)){--text-primary:255 255 255}}
-    /* layer: default */
-    .text-primary{color:rgb(var(--text-primary) / 1);}
-    .text-primary\\:10{color:rgb(var(--text-primary) / 0.1);}"
+    .b-foo{--un-border-opacity:1;border-color:rgb(var(--border-color-foo) / var(--un-border-opacity));}
+    .text-accent{--un-text-opacity:1;color:rgb(var(--accent) / var(--un-text-opacity));}"
   `)
 })
