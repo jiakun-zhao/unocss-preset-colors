@@ -2,6 +2,8 @@
 
 ![npm version](https://img.shields.io/npm/v/unocss-preset-colors?color=%23954)
 
+Defining dark colors in UnoCSS
+
 See [test](./src/index.test.ts)...
 
 #### LICENSE
