@@ -5,7 +5,7 @@ interface Selectors extends DarkModeSelectors {
   mixin?: boolean
 }
 
-type ColorKeys = 'colors' | `${string}Color`
+export type ColorKeys = 'colors' | `${string}Color`
 
 export type Options =
   & { mode?: 'media' | 'mixin' | Selectors }

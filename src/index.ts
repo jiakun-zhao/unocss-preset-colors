@@ -2,12 +2,13 @@ import type { Preset } from 'unocss'
 import type { Theme } from 'unocss/preset-mini'
 import type { Options } from './types'
 import { parseCssColor } from '@unocss/rule-utils'
+import setWithPropertyPath from 'lodash.set'
 import { kebabCase } from 'scule'
 import { name } from '../package.json'
 
 export default function (options: Options = {}): Preset<Theme> {
   const { mode = {}, ...colors } = options
-  const theme: Record<string, Record<string, string>> = {}
+  const theme: Record<string, Record<string, any>> = {}
   let lCss = ''
   let dCss = ''
 
@@ -23,7 +24,7 @@ export default function (options: Options = {}): Preset<Theme> {
       if (lType !== dType)
         return
       const n = type === 'colors' ? `--${name}` : `--${kebabCase(type)}-${name}`
-      theme[type][name] = `${lType}(var(${n}))`
+      setWithPropertyPath(theme[type], name.split('-').filter(Boolean).join('.'), `${lType}(var(${n}))`)
       lCss += `${n}:${lComp.join(' ')};`
       dCss += `${n}:${dComp.join(' ')};`
     })
