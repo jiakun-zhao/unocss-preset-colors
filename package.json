@@ -1,7 +1,7 @@
 {
   "name": "unocss-preset-colors",
   "type": "module",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Defining dark colors in UnoCSS",
   "author": "Jiakun Zhao <hi@zhaojiakun.com>",
   "license": "MIT",
