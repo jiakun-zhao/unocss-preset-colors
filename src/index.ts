@@ -8,12 +8,12 @@ import { name } from '../package.json'
 
 export default function (options: Options = {}): Preset<Theme> {
   const { mode = {}, ...colors } = options
-  const theme: Record<string, Record<string, any>> = {}
+  const theme: Record<string, Record<string, any>> = { colors: {} }
   let lCss = ''
   let dCss = ''
 
   Object.entries(colors).forEach(([type, values]) => {
-    theme[type] = {}
+    !theme[type] && (theme[type] = {})
     Object.entries(values).forEach(([name, { light: l, dark: d }]) => {
       const lParsedColor = parseCssColor(l)
       const dParsedColor = parseCssColor(d)
@@ -23,8 +23,11 @@ export default function (options: Options = {}): Preset<Theme> {
       const { type: dType, components: dComp } = dParsedColor
       if (lType !== dType)
         return
-      const n = type === 'colors' ? `--${name}` : `--${kebabCase(type)}-${name}`
+      const kebabCaseType = kebabCase(type)
+      const n = type === 'colors' ? `--${name}` : `--${kebabCaseType}-${name}`
       setWithPropertyPath(theme[type], name.split('-').filter(Boolean).join('.'), `${lType}(var(${n}))`)
+      if (type !== 'colors')
+        setWithPropertyPath(theme.colors, `${kebabCaseType}-shared-${name}`.split('-').filter(Boolean).join('.'), `${lType}(var(${n}))`)
       lCss += `${n}:${lComp.join(' ')};`
       dCss += `${n}:${dComp.join(' ')};`
     })
