@@ -7,7 +7,7 @@ import { kebabCase } from 'scule'
 import { name } from '../package.json'
 
 export default function (options: Options = {}): Preset<Theme> {
-  const { mode = {}, ...colors } = options
+  const { mode = {}, shared = true, ...colors } = options
   const theme: Record<string, Record<string, any>> = { colors: {} }
   let lCss = ''
   let dCss = ''
@@ -25,9 +25,12 @@ export default function (options: Options = {}): Preset<Theme> {
         return
       const kebabCaseType = kebabCase(type)
       const n = type === 'colors' ? `--${name}` : `--${kebabCaseType}-${name}`
-      setWithPropertyPath(theme[type], name.split('-').filter(Boolean).join('.'), `${lType}(var(${n}))`)
-      if (type !== 'colors')
-        setWithPropertyPath(theme.colors, `${kebabCaseType}-shared-${name}`.split('-').filter(Boolean).join('.'), `${lType}(var(${n}))`)
+      const v = `${lType}(var(${n}))`
+      setWithPropertyPath(theme[type], toPath(name), v)
+      if (shared && type !== 'colors') {
+        const path = toPath(`${kebabCaseType.replace('-color', '')}-${name}-shared`)
+        setWithPropertyPath(theme.colors, path, v)
+      }
       lCss += `${n}:${lComp.join(' ')};`
       dCss += `${n}:${dComp.join(' ')};`
     })
@@ -55,4 +58,8 @@ export default function (options: Options = {}): Preset<Theme> {
     preflights: [{ getCSS: () => css }],
     theme,
   }
+}
+
+function toPath(str: string) {
+  return str.split('-').filter(Boolean).join('.')
 }
