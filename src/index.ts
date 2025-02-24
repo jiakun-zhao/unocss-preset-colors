@@ -1,65 +1,82 @@
 import type { Preset } from 'unocss'
 import type { Theme } from 'unocss/preset-mini'
-import type { Options } from './types'
-import { parseCssColor } from '@unocss/rule-utils'
-import setWithPropertyPath from 'lodash.set'
-import { kebabCase } from 'scule'
+import { cleanText, isObject, isString } from '@jiakun-zhao/utils'
+import { variantMatcher } from '@unocss/rule-utils'
 import { name } from '../package.json'
 
-export default function (options: Options = {}): Preset<Theme> {
-  const { mode = {}, shared = true, ...colors } = options
-  const theme: Record<string, Record<string, any>> = { colors: {} }
-  let lCss = ''
-  let dCss = ''
-
-  Object.entries(colors).forEach(([type, values]) => {
-    !theme[type] && (theme[type] = {})
-    Object.entries(values).forEach(([name, { light: l, dark: d }]) => {
-      const lParsedColor = parseCssColor(l)
-      const dParsedColor = parseCssColor(d)
-      if (!lParsedColor || !dParsedColor)
-        return
-      const { type: lType, components: lComp } = lParsedColor
-      const { type: dType, components: dComp } = dParsedColor
-      if (lType !== dType)
-        return
-      const kebabCaseType = kebabCase(type)
-      const n = type === 'colors' ? `--${name}` : `--${kebabCaseType}-${name}`
-      const v = `${lType}(var(${n}))`
-      setWithPropertyPath(theme[type], toPath(name), v)
-      if (shared && type !== 'colors') {
-        const path = toPath(`${kebabCaseType.replace('-color', '')}-${name}-shared`)
-        setWithPropertyPath(theme.colors, path, v)
-      }
-      lCss += `${n}:${lComp.join(' ')};`
-      dCss += `${n}:${dComp.join(' ')};`
-    })
-  })
-
-  const media = '@media (prefers-color-scheme:dark)'
-  let css = ''
-
-  if (mode === 'media') {
-    css = `:root{${lCss}}${media}{:root{${dCss}}}`
-  } else {
-    const _mode = mode === 'mixin' ? {} : mode
-    const { tag = 'html', mixin = true, dark: dotDark = '.dark', light: dotLight = '.light' } = _mode
-    if (mixin) {
-      css = `${tag},${tag}${dotLight}{${lCss}}${tag}${dotDark}{${dCss}}${media}{${tag}:not(:is(${dotLight},${dotDark})){${dCss}}}`
-    } else {
-      css = `${tag}${dotLight}{${lCss}}${tag}${dotDark}{${dCss}}`
-    }
-  }
-
-  return {
-    name,
-    enforce: 'pre',
-    layer: name,
-    preflights: [{ getCSS: () => css }],
-    theme,
-  }
+interface Color {
+  dark: string
+  light: string
 }
 
-function toPath(str: string) {
-  return str.split('-').filter(Boolean).join('.')
+interface ThemeColor extends Partial<Color> {
+  DEFAULT?: string
+
+  [key: string]: ThemeColor | string | undefined
+}
+
+function parseThemeColor(obj: Theme | ThemeColor, colors = new Map<string, Color>()) {
+  Object.values(obj).forEach((value) => {
+    if (!isObject(value))
+      return
+    const { DEFAULT, dark, light } = value as ThemeColor
+    if (isString(DEFAULT) && isString(dark) && isString(light)) {
+      const name = cleanText(DEFAULT, ' ').match(/var\((--.+?)\)/)?.[1]
+      name && colors.set(name, { dark, light })
+    }
+    parseThemeColor(value, colors)
+  })
+  return colors
+}
+
+function parseCss(input: Map<string, Color>) {
+  let light = ''
+  let dark = ''
+  Array.from(input).forEach(([key, value]) => {
+    light += `${key}:${value.light};`
+    dark += `${key}:${value.dark};`
+  })
+  return { dark, light }
+}
+
+export default function (): Preset<Theme> {
+  const lightPrefix = 'html:not(.dark)'
+  const darkPrefix = 'html:is(.dark)'
+  const darkPrefixInMedia = 'html:not(.light)'
+  return {
+    name,
+    enforce: 'post',
+    layers: {
+      [name]: 1000,
+    },
+    preflights: [{
+      layer: name,
+      getCSS(context) {
+        const colors = parseThemeColor(context.theme)
+        const { light, dark } = parseCss(colors)
+        return [
+          `${lightPrefix}{${light}}`,
+          `${darkPrefix}{${dark}}`,
+          `@media (prefers-color-scheme:dark){`,
+          `${darkPrefixInMedia}{${dark}}`,
+          `}`,
+        ].join('\n')
+      },
+    }],
+    configResolved(config) {
+      config.variants = [
+        ...config.variants.filter(({ name }) => name && !name.includes('dark') && !name.includes('light')),
+        variantMatcher('light', [
+          input => ({ prefix: `${lightPrefix} $$ ${input.prefix}` }),
+        ]),
+        variantMatcher('dark', [
+          input => ({ prefix: `${darkPrefix} $$ ${input.prefix}` }),
+          input => ({
+            prefix: `${darkPrefixInMedia} $$ ${input.prefix}`,
+            parent: `${input.parent ? ` $$ ${input.parent}` : ''}@media (prefers-color-scheme:dark)`,
+          }),
+        ]),
+      ]
+    },
+  }
 }

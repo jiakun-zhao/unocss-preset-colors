@@ -7,41 +7,39 @@ it('should work', async () => {
   const uno = await createGenerator<Theme>({
     presets: [
       presetWind3({ preflight: false }),
-      presetColors({
-        colors: { accent: { dark: 'rgb(1,2,3,.1)', light: 'rgb(1,2,3,.12)' } },
-        borderColor: { foo: { dark: '#111', light: '#ddd' } },
-        backgroundColor: { 'path-to-value': { dark: '#111', light: '#ddd' } },
-      }),
+      presetColors(),
     ],
-  })
-
-  expect(uno.config.theme.backgroundColor).toMatchInlineSnapshot(`
-    {
-      "path": {
-        "to": {
-          "value": "rgb(var(--background-color-path-to-value))",
+    theme: {
+      textColor: {
+        primary: {
+          DEFAULT: 'var(--hello)',
+          dark: '#111',
+          light: '#ddd',
+          primary: {
+            DEFAULT: 'var(--hello)',
+            dark: '#111',
+            light: '#ddd',
+          },
         },
       },
+    },
+  })
+
+  expect((await uno.generate('text-primary light:text-red dark:hover:text-blue dark:group-not-hover:bg-yellow')).css).toMatchInlineSnapshot(`
+    "/* layer: default */
+    html:is(.dark) .group:not(:hover) .dark\\:group-not-hover\\:bg-yellow{--un-bg-opacity:1;background-color:rgb(250 204 21 / var(--un-bg-opacity));}
+    .text-primary{color:var(--hello);}
+    html:not(.dark) .light\\:text-red{--un-text-opacity:1;color:rgb(248 113 113 / var(--un-text-opacity));}
+    html:is(.dark) .dark\\:hover\\:text-blue:hover{--un-text-opacity:1;color:rgb(96 165 250 / var(--un-text-opacity));}
+    @media (prefers-color-scheme:dark){
+    html:not(.light) .group:not(:hover) .dark\\:group-not-hover\\:bg-yellow{--un-bg-opacity:1;background-color:rgb(250 204 21 / var(--un-bg-opacity));}
+    html:not(.light) .dark\\:hover\\:text-blue:hover{--un-text-opacity:1;color:rgb(96 165 250 / var(--un-text-opacity));}
     }
-  `)
-
-  expect((await uno.generate('bg-path-to-val')).css).toMatchInlineSnapshot(`
-    "/* layer: preflights */
-    html,html.light{--accent:1 2 3;--border-color-foo:221 221 221;--background-color-path-to-value:221 221 221;}html.dark{--accent:1 2 3;--border-color-foo:17 17 17;--background-color-path-to-value:17 17 17;}@media (prefers-color-scheme:dark){html:not(:is(.light,.dark)){--accent:1 2 3;--border-color-foo:17 17 17;--background-color-path-to-value:17 17 17;}}"
-  `)
-
-  expect((await uno.generate('text-accent text-foo')).css).toMatchInlineSnapshot(`
-    "/* layer: preflights */
-    html,html.light{--accent:1 2 3;--border-color-foo:221 221 221;--background-color-path-to-value:221 221 221;}html.dark{--accent:1 2 3;--border-color-foo:17 17 17;--background-color-path-to-value:17 17 17;}@media (prefers-color-scheme:dark){html:not(:is(.light,.dark)){--accent:1 2 3;--border-color-foo:17 17 17;--background-color-path-to-value:17 17 17;}}
-    /* layer: default */
-    .text-accent{--un-text-opacity:1;color:rgb(var(--accent) / var(--un-text-opacity));}"
-  `)
-
-  expect((await uno.generate('text-accent b-foo')).css).toMatchInlineSnapshot(`
-    "/* layer: preflights */
-    html,html.light{--accent:1 2 3;--border-color-foo:221 221 221;--background-color-path-to-value:221 221 221;}html.dark{--accent:1 2 3;--border-color-foo:17 17 17;--background-color-path-to-value:17 17 17;}@media (prefers-color-scheme:dark){html:not(:is(.light,.dark)){--accent:1 2 3;--border-color-foo:17 17 17;--background-color-path-to-value:17 17 17;}}
-    /* layer: default */
-    .b-foo{--un-border-opacity:1;border-color:rgb(var(--border-color-foo) / var(--un-border-opacity));}
-    .text-accent{--un-text-opacity:1;color:rgb(var(--accent) / var(--un-text-opacity));}"
+    /* layer: unocss-preset-colors */
+    html:not(.dark){--hello:#ddd;}
+    html:is(.dark){--hello:#111;}
+    @media (prefers-color-scheme:dark){
+    html:not(.light){--hello:#111;}
+    }"
   `)
 })

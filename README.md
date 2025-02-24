@@ -4,7 +4,7 @@
 
 Defining dark colors in UnoCSS
 
-See [test](./src/index.test.ts)...
+See [test...](./src/index.test.ts)
 
 #### LICENSE
 
