@@ -47,7 +47,7 @@ export default function (): Preset<Theme> {
     name,
     enforce: 'post',
     layers: {
-      [name]: 1000,
+      [name]: -150,
     },
     preflights: [{
       layer: name,
